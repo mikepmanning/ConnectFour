@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane prefHeight="229.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.connectfour.TwoPlayerViewController">
+   <children>
+      <Label layoutX="33.0" layoutY="52.0" text="Player One Information">
+         <font>
+            <Font size="24.0" />
+         </font>
+      </Label>
+      <Label layoutX="328.0" layoutY="52.0" text="Player Two Information">
+         <font>
+            <Font size="24.0" />
+         </font>
+      </Label>
+      <TextField fx:id="onePlayerNameField" layoutX="90.0" layoutY="111.0" prefHeight="25.0" prefWidth="187.0" />
+      <Label layoutX="33.0" layoutY="110.0" text="Name: ">
+         <font>
+            <Font size="18.0" />
+         </font>
+      </Label>
+      <Label layoutX="328.0" layoutY="110.0" text="Name: ">
+         <font>
+            <Font size="18.0" />
+         </font>
+      </Label>
+      <TextField fx:id="twoPlayerNameField" layoutX="385.0" layoutY="111.0" prefHeight="25.0" prefWidth="187.0" />
+      <Button defaultButton="true" layoutX="225.0" layoutY="168.0" mnemonicParsing="false" onAction="#onTwoPlayerSubmitButtonClick" text="Play!" />
+      <Button cancelButton="true" layoutX="328.0" layoutY="168.0" mnemonicParsing="false" onAction="#onTwoPlayerBackButtonClick" text="Back" />
+   </children>
+</AnchorPane>
