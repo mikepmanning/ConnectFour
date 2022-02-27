@@ -4,17 +4,20 @@ import javafx.animation.ScaleTransition;
 import javafx.animation.TranslateTransition;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.effect.Bloom;
 import javafx.scene.effect.Light;
 import javafx.scene.effect.Lighting;
+import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -28,10 +31,12 @@ import javafx.util.Duration;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class ConnectFourController {
     public Button quitButton;
     public Button twoPlayerButton;
+    public Button onePlayerButton;
     @FXML
     private Label welcomeText;
     private GridPane root;
@@ -39,11 +44,19 @@ public class ConnectFourController {
     private static final int COLUMNS = 7;
     private static final int ROWS = 6;
     private static final double TILE_SIZE = 80;
+    private static final int PLAYER_ONE_TURN = 0;
+    private static final int PLAYER_TWO_TURN = 1;
 
     private boolean noClickAllowed = false; //to prevent playing another piece of the same color before previous move complete.
     private boolean gameOverFlag = false;
+    private boolean onePlayerGame = false;
 
-    private char currentPlayer = 'Y';
+    protected Player playerOne;
+    protected Player playerTwo;
+    protected Robot robotPlayerOne;
+    protected Robot robotPlayerTwo;
+
+    private int currentPlayer;
     private final Board board = new Board();
     private final Pane discRoot = new Pane();
     private final Pane winningRoot = new Pane();
@@ -51,10 +64,35 @@ public class ConnectFourController {
     private Ellipse playerTwoCircle;
 
 
-    //@FXML
-    //protected void onOnePlayerButtonClick() {
-   //     welcomeText.setText("Starting One Player Game");
-    //}
+    public void setPlayerOne(Player player) {
+        this.playerOne = player;
+    }
+
+    public void setPlayerTwo(Player player) {
+        this.playerTwo = player;
+    }
+
+    public void setRobotPlayerOne(Robot robot){
+        this.robotPlayerOne = robot;
+    }
+
+    public void setRobotPlayerTwo(Robot robot){
+        this.robotPlayerTwo = robot;
+    }
+
+    @FXML
+    public static void initialGameScreen(Stage stage) throws IOException {
+
+        FXMLLoader fxmlLoader = new FXMLLoader(ConnectFourApplication.class.getResource("hello-view.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 320, 240);
+        stage.setTitle("Welcome to Connect Four");
+        stage.setScene(scene);
+        stage.getIcons().add(new Image(String.valueOf(ConnectFourApplication.class.getResource("images/Icon.jpg"))));
+        stage.setWidth(200);
+        stage.setHeight(400);
+
+        stage.show();
+    }
 
     @FXML
     protected void onQuitButtonClick() {
@@ -62,25 +100,74 @@ public class ConnectFourController {
         System.exit(0);
     }
 
-
+    @FXML
     public void switchToGameScene(ActionEvent event) {
         board.resetBoard();
+        Random rand = new Random();
         gameOverFlag = false;
         noClickAllowed = false;
         discRoot.getChildren().clear();
         winningRoot.getChildren().clear();
         root = makeGameStage();
+        currentPlayer = rand.nextInt(2);
+        switchPlayerTurns(currentPlayer);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         Scene scene = new Scene(root);
         stage.setScene(scene);
+        stage.setWidth((COLUMNS+1)*TILE_SIZE);
+        stage.setHeight((ROWS+1)*TILE_SIZE + 200);
+        stage.show();
+    }
+
+    @FXML
+    public void switchToOnePlayerScene(ActionEvent event) throws  IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(ConnectFourApplication.class.getResource("oneplayer-view.fxml"));
+        Parent root = fxmlLoader.load();
+
+        OnePlayerViewController onePlayerViewController = fxmlLoader.getController();
+        onePlayerViewController.injectController(this);
+
+        onePlayerGame = true;
+
+        Scene scene = new Scene(root, 300, 400);
+
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setTitle("Player Information");
+        stage.setScene(scene);
+        stage.getIcons().add(new Image(String.valueOf(ConnectFourApplication.class.getResource("images/Icon.jpg"))));
+        stage.setWidth(300);
+        stage.setHeight(300);
+
+
+        stage.show();
+    }
+
+    @FXML
+    public void switchToTwoPlayerScene(ActionEvent event) throws  IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(ConnectFourApplication.class.getResource("twoplayer-view.fxml"));
+        Parent root = fxmlLoader.load();
+
+        TwoPlayerViewController twoPlayerViewController = fxmlLoader.getController();
+        twoPlayerViewController.injectController(this);
+
+        onePlayerGame = false;
+
+        Scene scene = new Scene(root, 300, 400);
+
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setTitle("Player Information");
+        stage.setScene(scene);
+        stage.getIcons().add(new Image(String.valueOf(ConnectFourApplication.class.getResource("images/Icon.jpg"))));
+        stage.setWidth(650);
+        stage.setHeight(300);
+
+
         stage.show();
     }
 
     public void restartGame(ActionEvent event) throws IOException {
         System.out.println("Running restartGame");
         switchToGameScene(event);
-        switchPlayerTurns(currentPlayer);
-
     }
 
     private GridPane makeGameStage() {
@@ -100,7 +187,7 @@ public class ConnectFourController {
         playerOneCircle.setRadiusY(50);
         playerOneCircle.setFill(Color.YELLOW);
         Label playerOneLabel = new Label();
-        playerOneLabel.setText("Player One");
+        playerOneLabel.setText(playerOne.getName());
         playerOneLabel.setFont(new Font("Arial", 30));
 
         playerTwoCircle = new Ellipse();
@@ -108,7 +195,12 @@ public class ConnectFourController {
         playerTwoCircle.setRadiusY(50);
         playerTwoCircle.setFill(Color.TRANSPARENT);
         Label playerTwoLabel = new Label();
-        playerTwoLabel.setText("Player Two");
+        if (onePlayerGame) {
+            playerTwoLabel.setText(robotPlayerTwo.getName());
+        }
+        else {
+            playerTwoLabel.setText(playerTwo.getName());
+        }
         playerTwoLabel.setFont(new Font("Arial", 30));
 
 
@@ -131,6 +223,10 @@ public class ConnectFourController {
         pane.add(playerTwoLabel, 1, 1);
         //pane.setStyle("-fx-background-color: linear-gradient(to bottom right, #00FF80, #00994C)");
         pane.setStyle(" -fx-background-color: radial-gradient(focus-distance 0%, center 50% 50%, radius 55%, #00CC66, #00994C)");
+
+//        Button scoreButton = new Button("Get Position Score");
+//        scoreButton.setOnAction(e -> System.out.println("Position score: " + board.getPositionScore(1)));
+//        pane.add(scoreButton, 0, 2);
 
 
         return pane;
@@ -183,7 +279,7 @@ public class ConnectFourController {
             rect.setOnMouseExited(e -> rect.setFill(Color.TRANSPARENT));
 
             final int column = x;
-            rect.setOnMouseClicked(e -> placeDisc(new Disc(currentPlayer == 'R'), column));
+            rect.setOnMouseClicked(e -> placeDisc(new Disc(getDiscColor(currentPlayer)), column));
 
             list.add(rect);
         }
@@ -191,13 +287,29 @@ public class ConnectFourController {
         return list;
     }
 
+    private Color getDiscColor(int player)
+    {
+        if (player == PLAYER_TWO_TURN) {
+            if (onePlayerGame) {
+                return robotPlayerTwo.getColor();
+            }
+            else
+            {
+                return playerTwo.getColor();
+            }
+        }
+
+        return playerOne.getColor();
+    }
+
     private void placeDisc(Disc disc, int column) {
 
-        if (noClickAllowed || gameOverFlag) {
+        if (noClickAllowed || gameOverFlag || !board.getAvailableColumns().contains(column)) {
             return;
         }
 
         int row = board.playPiece(column, currentPlayer);
+        board.showBoard();
 
         //visual part
         discRoot.getChildren().add(disc);
@@ -209,40 +321,61 @@ public class ConnectFourController {
         animation.setToY(row * (TILE_SIZE+5) + TILE_SIZE/4);
         animation.setOnFinished(e -> {
             ArrayList<Point2D> winning_points = board.checkWinner(column, currentRow, currentPlayer);
-            if (winning_points.size() >= 4) {
+            if (!winning_points.isEmpty()) {
                 try {
                     gameOver(winning_points, currentPlayer);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
-
-            if (currentPlayer == 'Y') {
-                currentPlayer = 'R';
+            else if (board.getAvailableColumns().isEmpty()) {
+                System.out.println("Should be game over Tied");
+                VBox exitPane = makeGameOverPane(3);
+                root.add(exitPane, 0, 1, 2, 1);
             }
-            else if (currentPlayer == 'R') {
-                currentPlayer = 'Y';
-            }
-            switchPlayerTurns(currentPlayer);
+            else {
 
-            noClickAllowed = false;
+                if (currentPlayer == PLAYER_ONE_TURN) {
+                    currentPlayer = PLAYER_TWO_TURN;
+                } else if (currentPlayer == PLAYER_TWO_TURN) {
+                    currentPlayer = PLAYER_ONE_TURN;
+                }
+                noClickAllowed = false;
+                switchPlayerTurns(currentPlayer);
+            }
         });
         noClickAllowed = true;
         animation.play();
     }
 
-    private void switchPlayerTurns(char player) {
-        if (player == 'Y') {
-            playerOneCircle.setFill(Color.YELLOW);
+    private void doRobotPlay() {
+        int column = robotPlayerTwo.playColumn(board);
+        System.out.println("Robot playing to Column " + column);
+        placeDisc(new Disc(robotPlayerTwo.getColor()), column);
+    }
+
+
+    private void switchPlayerTurns(int player) {
+        if (player == PLAYER_ONE_TURN) {
+            playerOneCircle.setFill(playerOne.getColor());
             playerTwoCircle.setFill(Color.TRANSPARENT);
         }
-        else if (player == 'R') {
+        else if (player == PLAYER_TWO_TURN) {
             playerOneCircle.setFill(Color.TRANSPARENT);
-            playerTwoCircle.setFill(Color.RED);
+            if (onePlayerGame) {
+                playerTwoCircle.setFill(robotPlayerTwo.getColor());
+                System.out.println("Robot turn");
+                if (!board.getWinState()) {
+                    doRobotPlay();
+                }
+            }
+            else {
+                playerTwoCircle.setFill(playerTwo.getColor());
+            }
         }
     }
 
-    private VBox makeGameOverPane(char winningPlayer) {
+    private VBox makeGameOverPane(int winningPlayer) {
         VBox pane = new VBox();
         HBox bottomPane = new HBox();
 
@@ -257,15 +390,24 @@ public class ConnectFourController {
 
         Label winningLabel = new Label();
         String winningText = "";
-        if (winningPlayer == 'R') {
-            winningText = "Player Two Wins!";
+        if (winningPlayer == PLAYER_TWO_TURN) {
+            if (onePlayerGame) {
+                winningText = robotPlayerTwo.getName() + " Wins!";
+            }
+            else {
+                winningText = playerTwo.getName() + " Wins!";
+            }
             //pane.setStyle("-fx-background-color: #FF0000");
             pane.setStyle("-fx-background-color: radial-gradient(center 50% 50% , radius 90% , #FF6666, #FF0000)");
         }
-        else if (winningPlayer == 'Y') {
-            winningText = "Player One Wins!";
+        else if (winningPlayer == PLAYER_ONE_TURN) {
+            winningText = playerOne.getName() + " Wins!";
             pane.setStyle("-fx-background-color: radial-gradient(center 50% 50% , radius 90% , #FFFF99, #FFFF00)");
             //pane.setStyle("-fx-background-color: #FFFF00");
+        }
+        else if (winningPlayer == 3) { // board filled with no winners
+            winningText = "Tie Game!";
+            pane.setStyle(" -fx-background-color: radial-gradient(focus-distance 0%, center 50% 50%, radius 55%, #00CC66, #00994C)");
         }
         winningLabel.setText(winningText);
         winningLabel.setFont(Font.font(25));
@@ -290,7 +432,7 @@ public class ConnectFourController {
         return pane;
     }
 
-    private void gameOver(ArrayList<Point2D> points, char winningPlayer) throws IOException {
+    private void gameOver(ArrayList<Point2D> points, int winningPlayer) throws IOException {
         winningRoot.getChildren().addAll(highlightWinningDiscs(points));
         System.out.println("Game over!");
 
@@ -309,7 +451,7 @@ public class ConnectFourController {
             WinningDisc disc = new WinningDisc();
             disc.setTranslateX(point.getX()*(TILE_SIZE+5)+TILE_SIZE/4);
             disc.setTranslateY(point.getY()*(TILE_SIZE+5) + TILE_SIZE/4);
-            disc.setFill((currentPlayer == 'R' ? Color.RED : Color.YELLOW));
+            disc.setFill(getDiscColor(currentPlayer));
             disc.setRadius(disc.getRadius()*1.2);
 
             Bloom bloom = new Bloom();
@@ -340,8 +482,8 @@ public class ConnectFourController {
 
 
     private static class Disc extends Circle {
-        public Disc(boolean red) {
-            super(TILE_SIZE/2, red ? Color.RED : Color.YELLOW);
+        public Disc(Color color) {
+            super(TILE_SIZE/2, color);
 
             setCenterX(TILE_SIZE/2);
             setCenterY(TILE_SIZE/2);

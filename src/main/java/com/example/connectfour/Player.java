@@ -13,6 +13,10 @@ public class Player {
         this.color = color;
     }
 
+    public boolean isPlayer() {
+        return true;
+    }
+
     public Color getColor() {
         return color;
     }

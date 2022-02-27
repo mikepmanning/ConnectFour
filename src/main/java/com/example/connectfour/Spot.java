@@ -1,17 +1,17 @@
 package com.example.connectfour;
 
 public class Spot {
-    private char piece;
+    private int piece;
     private final int column;
     private final int row;
 
     public Spot(int column, int row) {
         this.column = column;
         this.row = row;
-        this.piece = 'N';
+        this.piece = 9;
     }
 
-    public char getPiece() {
+    public int getPiece() {
         return piece;
     }
 
@@ -23,7 +23,7 @@ public class Spot {
         return row;
     }
 
-    public void setPiece(char piece) {
+    public void setPiece(int piece) {
         this.piece = piece;
     }
 }
