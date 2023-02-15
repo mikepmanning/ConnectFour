@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import javafx.geometry.Point2D;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.IntStream;
 
 public class Board {
@@ -20,6 +21,11 @@ public class Board {
     private static final int WINNER_ADJ = 100000;
 
     private final ArrayList<Integer> availableColumns = new ArrayList<>();
+
+    private long[] bitboard = new long[2];
+    private int[] height = new int[COLUMNS];
+    private int counter = 0;
+    private final List<Integer> moves = new ArrayList<>();
 
 
     public Board() {
@@ -75,7 +81,13 @@ public class Board {
             availableColumns.remove(Integer.valueOf(column));
         }
 
+
+        long move = 1L << height[column]++;
+        bitboard[player] ^= move;
+        moves.add(counter++, column);
+
         checkWinner(column, r, player);
+
         return r;
     }
 
@@ -95,6 +107,15 @@ public class Board {
         availableColumns.clear();
         for (int i : stream) {
             availableColumns.add(i);
+        }
+
+        moves.clear();
+        bitboard[0] = 0;
+        bitboard[1] = 0;
+        counter = 0;
+        for (int i = 0; i < COLUMNS; i++) {
+            height[i] = (ROWS+1)*i;
+            System.out.println("Height[" + i + "] = " + (ROWS+1)*i);
         }
     }
 
@@ -130,6 +151,9 @@ public class Board {
 
     private ArrayList<Point2D> getForwardDiagonalSpots(int column, int row) {
         ArrayList<Point2D> list = new ArrayList<>();
+
+        System.out.println("Column: " + column);
+        System.out.println("Row: " + row);
 
         int minRow = row;
         int minCol = column;
@@ -219,27 +243,63 @@ public class Board {
     }
     public ArrayList<Point2D> checkWinner(int column, int row, int currentPlayer) {
 
-        ArrayList<Point2D> horizontalWinner = checkWinnerPoints(getHorizontalSpots(column, row), currentPlayer);
-        if (!horizontalWinner.isEmpty()) {
-            return horizontalWinner;
+        if (horizontal_win(currentPlayer)) {
+            return checkWinnerPoints(getHorizontalSpots(column, row), currentPlayer);
         }
 
-        ArrayList<Point2D> verticalWinner = checkWinnerPoints(getVerticalSpots(column, row), currentPlayer);
-        if (!verticalWinner.isEmpty()) {
-            return verticalWinner;
+        if (vertical_win(currentPlayer)) {
+            return checkWinnerPoints(getVerticalSpots(column, row), currentPlayer);
         }
 
-        ArrayList<Point2D> forwardDiagWinner = checkWinnerPoints(getForwardDiagonalSpots(column, row), currentPlayer);
-        if (!forwardDiagWinner.isEmpty()) {
-            return forwardDiagWinner;
+
+        if (diagonal_win(currentPlayer)) {
+            return checkWinnerPoints(getBackwardDiagonalSpots(column, row), currentPlayer);
         }
 
-        ArrayList<Point2D> backwardDiagWinner = checkWinnerPoints(getBackwardDiagonalSpots(column, row), currentPlayer);
-        if (!backwardDiagWinner.isEmpty()) {
-            return backwardDiagWinner;
+        if (back_diagonal_win(currentPlayer)) {
+            return checkWinnerPoints(getForwardDiagonalSpots(column, row), currentPlayer);
         }
 
         return new ArrayList<>();
+    }
+
+    private boolean horizontal_win(int currentPlayer){
+        long bb;
+        bb = bitboard[currentPlayer] & (bitboard[currentPlayer] >> 7);
+        if ((bb & (bb >> 14)) != 0) {
+            return true;
+        }
+
+        return false;
+    }
+    private boolean vertical_win(int currentPlayer) {
+        long bb;
+        bb = bitboard[currentPlayer] & (bitboard[currentPlayer] >> 1);
+        if ((bb & (bb >> 2)) != 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean back_diagonal_win(int currentPlayer) {
+        long bb;
+        bb = bitboard[currentPlayer] & (bitboard[currentPlayer] >> 6);
+        if ((bb & (bb >> 12)) != 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean diagonal_win(int currentPlayer) {
+        long bb;
+        bb = bitboard[currentPlayer] & (bitboard[currentPlayer] >> 8);
+        if ((bb & (bb >> 16)) != 0) {
+            return true;
+        }
+
+        return false;
     }
 
     private int getPoints(int pp, int empty, int op) {
@@ -389,18 +449,42 @@ public class Board {
     }
 
     public void showBoard() {
-        for (int r = 0; r < ROWS; r++) {
-            for (int c = 0; c < COLUMNS; c++) {
-                char piece = '.';
-                if (getSpot(c,r) == 0)
-                    piece = 'Y';
-                else if (getSpot(c,r) == 1)
-                    piece = 'R';
+//        for (int r = 0; r < ROWS; r++) {
+//            for (int c = 0; c < COLUMNS; c++) {
+//                char piece = '.';
+//                if (getSpot(c,r) == 0)
+//                    piece = 'Y';
+//                else if (getSpot(c,r) == 1)
+//                    piece = 'R';
+//
+//                System.out.print(piece);
+//            }
+//            System.out.println();
+//        }
 
-                System.out.print(piece);
+        StringBuilder result = new StringBuilder();
+
+        result.append("BitBoard 1\n");
+        for (int r = 1; r <= ROWS; r++) {
+            for (int i = ROWS-r; i < ((COLUMNS)*7); i +=7) {
+                long mask = 1L << i;
+                String R = (bitboard[0] & mask) != 0 ? "1" : ".";
+                result.append(R);
             }
-            System.out.println();
+            result.append("\n");
         }
+
+        result.append("BitBoard 2\n");
+        for (int r = 1; r <= ROWS; r++) {
+            for (int i = ROWS-r; i < ((COLUMNS)*7); i +=7) {
+                long mask = 1L << i;
+                String R = (bitboard[1] & mask) != 0 ? "1" : ".";
+                result.append(R);
+            }
+            result.append("\n");
+        }
+
+        System.out.println(result);
     }
 
     public Board getCopy() {
